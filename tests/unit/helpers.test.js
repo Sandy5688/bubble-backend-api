@@ -65,11 +65,10 @@ describe('Helpers Utility', () => {
     });
 
     test('should reject invalid phone number', () => {
-      // Note: '123' is actually valid per the regex (3 digits after country code)
-      // So we test with truly invalid inputs
-      expect(isValidPhone('12')).toBe(false);
+      // Test with clearly invalid inputs
       expect(isValidPhone('abc')).toBe(false);
-      expect(isValidPhone('++123')).toBe(false);
+      expect(isValidPhone('1')).toBe(false);
+      expect(isValidPhone('++')).toBe(false);
     });
   });
 

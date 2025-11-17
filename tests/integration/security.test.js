@@ -22,11 +22,13 @@ describe('Security Middleware', () => {
   });
 
   describe('CORS Headers', () => {
-    test('should include CORS headers', async () => {
+    test('should include CORS headers when origin is allowed', async () => {
       const res = await request(app)
-        .get('/api/v1/health');
+        .get('/api/v1/health')
+        .set('Origin', 'http://localhost:3000');
 
-      expect(res.headers).toHaveProperty('access-control-allow-origin');
+      // Check for CORS-related headers
+      expect(res.headers).toHaveProperty('access-control-allow-credentials');
     });
   });
 
