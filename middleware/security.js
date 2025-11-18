@@ -1,132 +1,102 @@
-const helmet = require('helmet');
-const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const env = require('../config/env');
-const { AppError } = require('./errorHandler');
-const crypto = require('crypto');
+const { logger } = require('../utils/logger');
 
-// Helmet configuration
-const helmetConfig = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:']
-    }
+// General rate limiter
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per windowMs
+  message: { 
+    status: 'error',
+    code: 429,
+    message: 'Too many requests, please try again later'
   },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
+    res.status(429).json({
+      status: 'error',
+      code: 429,
+      message: 'Too many requests, please try again later'
+    });
   }
 });
 
-// CORS configuration
-const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim());
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new AppError('Not allowed by CORS', 403));
-    }
+// Strict limiter for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    status: 'error',
+    code: 429,
+    message: 'Too many authentication attempts, please try again later'
   },
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+  skipSuccessfulRequests: true
+});
 
-// Rate limiting configurations
-const createRateLimiter = (windowMs, max, message) => {
-  return rateLimit({
-    windowMs,
-    max,
-    message: { status: 'error', message },
-    standardHeaders: true,
-    legacyHeaders: false
-  });
-};
+// Payment endpoint limiter
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    status: 'error',
+    code: 429,
+    message: 'Too many payment requests, please try again later'
+  }
+});
 
-const generalLimiter = createRateLimiter(
-  env.RATE_LIMIT_WINDOW_MS,
-  env.RATE_LIMIT_MAX_REQUESTS,
-  'Too many requests from this IP, please try again later'
-);
+// AI endpoint limiter
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    status: 'error',
+    code: 429,
+    message: 'Too many AI requests, please try again later'
+  }
+});
 
-const authLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  5, // 5 requests
-  'Too many authentication attempts, please try again later'
-);
-
-const paymentLimiter = createRateLimiter(
-  60 * 1000, // 1 minute
-  10, // 10 requests
-  'Too many payment requests, please slow down'
-);
-
-const aiLimiter = createRateLimiter(
-  60 * 1000, // 1 minute
-  20, // 20 requests
-  'Too many AI requests, please slow down'
-);
-
-// Internal API key validation
-const validateInternalApiKey = (req, res, next) => {
+// API key validation middleware
+const validateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
+  const env = require('../config/env');
   
   if (!apiKey) {
-    return next(new AppError('API key is required', 401));
+    return res.status(401).json({
+      status: 'error',
+      code: 401,
+      message: 'API key is required'
+    });
   }
-
+  
   if (apiKey !== env.INTERNAL_API_KEY) {
-    return next(new AppError('Invalid API key', 403));
+    logger.warn(`Invalid API key attempt from IP: ${req.ip}`);
+    return res.status(403).json({
+      status: 'error',
+      code: 403,
+      message: 'Invalid API key'
+    });
   }
-
+  
   next();
 };
 
-// Request signature validation (for webhooks)
-const validateWebhookSignature = (secret) => {
-  return (req, res, next) => {
-    const signature = req.headers['x-signature'];
-    const timestamp = req.headers['x-timestamp'];
-
-    if (!signature || !timestamp) {
-      return next(new AppError('Missing signature or timestamp', 401));
-    }
-
-    // Check timestamp (prevent replay attacks - 5 min window)
-    const currentTime = Math.floor(Date.now() / 1000);
-    const requestTime = parseInt(timestamp);
-
-    if (Math.abs(currentTime - requestTime) > 300) {
-      return next(new AppError('Request timestamp expired', 401));
-    }
-
-    // Verify signature
-    const payload = JSON.stringify(req.body);
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(`${timestamp}.${payload}`)
-      .digest('hex');
-
-    if (signature !== expectedSignature) {
-      return next(new AppError('Invalid signature', 403));
-    }
-
-    next();
-  };
+// Setup security middleware on app
+const setupSecurity = (app) => {
+  // Apply general rate limiter to all routes
+  app.use('/api/', generalLimiter);
+  
+  // Apply specific rate limiters (will be used in routes)
+  app.set('authLimiter', authLimiter);
+  app.set('paymentLimiter', paymentLimiter);
+  app.set('aiLimiter', aiLimiter);
 };
 
 module.exports = {
-  helmetConfig,
-  corsOptions: cors(corsOptions),
+  setupSecurity,
   generalLimiter,
   authLimiter,
   paymentLimiter,
   aiLimiter,
-  validateInternalApiKey,
-  validateWebhookSignature
+  validateApiKey
 };
