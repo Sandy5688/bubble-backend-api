@@ -1,51 +1,49 @@
 # Dependencies
 node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment
-.env
-.env.local
-.env.*.local
-*.env
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# Logs
-logs/
-*.log
+# Coverage directory
+coverage/
+.nyc_output/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build
+# Build files
 dist/
 build/
 
-# Private workers (MUST NOT BE COMMITTED)
-workers/private/
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.backup
 
-# Test coverage
-coverage/
-
-# PM2
-.pm2/
-
-# Misc
-*.pem
-*.key
-.cache/
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Environment variables
-.env
+# Testing
+.test/
