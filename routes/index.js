@@ -22,7 +22,7 @@ const authenticate = async (req, res, next) => {
     if (!token) {
       throw new AppError('Authentication required', 401);
     }
-
+    
     const user = await authService.getUserByToken(token);
     req.user = user;
     next();
@@ -31,17 +31,38 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Health check (public)
+// Root API info
+router.get('/', (req, res) => {
+  res.json({
+    message: 'Bubble Backend API v1.0.0',
+    status: 'operational',
+    documentation: '/api/v1/api-docs',
+    endpoints: {
+      health: '/api/v1/health',
+      auth: '/api/v1/auth',
+      users: '/api/v1/user',
+      files: '/api/v1/files',
+      payments: '/api/v1/pay',
+      messaging: '/api/v1/msg',
+      ai: '/api/v1/ai',
+      workflows: '/api/v1/flow'
+    }
+  });
+});
+
+// Health check (public - no authentication required)
 router.use('/health', healthRoutes);
 
 // Auth routes (public with rate limiting)
 router.use('/auth', authRoutes);
 
-// Apply internal API key validation and authentication to all other routes
+// Apply internal API key validation to all other routes
 router.use(validateInternalApiKey);
+
+// Apply authentication to all protected routes
 router.use(authenticate);
 
-// Protected routes
+// Protected routes (require both API key and user authentication)
 router.use('/user', userRoutes);
 router.use('/files', fileRoutes);
 router.use('/pay', paymentRoutes);
@@ -49,11 +70,14 @@ router.use('/msg', messagingRoutes);
 router.use('/ai', aiRoutes);
 router.use('/flow', workflowRoutes);
 
-// 404 handler for undefined routes
+// 404 handler for undefined API routes
 router.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
-    message: 'Route not found'
+    code: 404,
+    message: 'API route not found',
+    path: req.originalUrl,
+    hint: 'Check /api/v1/api-docs for available endpoints'
   });
 });
 
