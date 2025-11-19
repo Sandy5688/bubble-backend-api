@@ -13,7 +13,7 @@ const { auditLog, SENSITIVE_ACTIONS } = require('../middleware/auditLog.middlewa
 router.post('/signup', 
   signupBruteForce, 
   auditLog(SENSITIVE_ACTIONS.ACCOUNT_CREATED, 'user'),
-  authController.signup
+  authController.signUp  // Note: signUp not signup
 );
 
 /**
@@ -23,8 +23,15 @@ router.post('/signup',
  */
 router.post('/signin', 
   loginBruteForce,
-  authController.signin
+  authController.signIn  // Note: signIn not signin
 );
+
+/**
+ * @route   POST /api/v1/auth/signout
+ * @desc    User signout
+ * @access  Public
+ */
+router.post('/signout', authLimiter, authController.signOut);
 
 /**
  * @route   POST /api/v1/auth/reset-password
@@ -38,17 +45,17 @@ router.post('/reset-password',
 );
 
 /**
- * @route   POST /api/v1/auth/verify-email
- * @desc    Verify email address
- * @access  Public
- */
-router.post('/verify-email', authLimiter, authController.verifyEmail);
-
-/**
  * @route   POST /api/v1/auth/refresh
  * @desc    Refresh access token
  * @access  Public
  */
 router.post('/refresh', authLimiter, authController.refreshToken);
+
+/**
+ * @route   GET /api/v1/auth/me
+ * @desc    Get current user
+ * @access  Private
+ */
+router.get('/me', authController.getMe);
 
 module.exports = router;
