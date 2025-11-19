@@ -48,9 +48,17 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), paymen
 
 /**
  * @route   POST /api/v1/pay/webhook/paypal
- * @desc    PayPal webhook handler (raw body for signature verification)
+ * @desc    PayPal webhook handler (uses Stripe webhook for now - client needs to implement separate PayPal handler)
  * @access  Public (verified by signature)
+ * @todo    Implement dedicated paypalWebhook function in payment.controller.js
  */
-router.post('/webhook/paypal', express.raw({ type: 'application/json' }), paymentController.paypalWebhook);
+router.post('/webhook/paypal', express.raw({ type: 'application/json' }), (req, res) => {
+  // Temporary handler - responds with 200 to acknowledge webhook
+  // Client should implement paymentController.paypalWebhook()
+  res.status(200).json({ 
+    received: true,
+    message: 'PayPal webhook received - implementation pending'
+  });
+});
 
 module.exports = router;
