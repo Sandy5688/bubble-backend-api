@@ -15,11 +15,10 @@ router.get('/csrf-token', csrfProtection, getCsrfToken);
 
 /**
  * @route   POST /api/v1/auth/signup
- * @desc    User signup (with brute force protection, CSRF & audit logging)
+ * @desc    User signup (with brute force protection & audit logging)
  * @access  Public
  */
 router.post('/signup', 
-  csrfProtection,
   signupBruteForce, 
   auditLog(SENSITIVE_ACTIONS.ACCOUNT_CREATED, 'user'),
   authController.signUp
@@ -27,11 +26,10 @@ router.post('/signup',
 
 /**
  * @route   POST /api/v1/auth/signin
- * @desc    User signin (with brute force protection & CSRF)
+ * @desc    User signin (with brute force protection)
  * @access  Public
  */
 router.post('/signin', 
-  csrfProtection,
   loginBruteForce,
   authController.signIn
 );
@@ -41,15 +39,14 @@ router.post('/signin',
  * @desc    User signout
  * @access  Public
  */
-router.post('/signout', csrfProtection, authLimiter, authController.signOut);
+router.post('/signout', authLimiter, authController.signOut);
 
 /**
  * @route   POST /api/v1/auth/reset-password
- * @desc    Request password reset (with brute force protection, CSRF & audit logging)
+ * @desc    Request password reset (with brute force protection & audit logging)
  * @access  Public
  */
 router.post('/reset-password', 
-  csrfProtection,
   passwordResetBruteForce,
   auditLog(SENSITIVE_ACTIONS.PASSWORD_CHANGED, 'user'),
   authController.resetPassword

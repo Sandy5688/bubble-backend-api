@@ -7,6 +7,7 @@ const routes = require('./routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const { secureRequestLogger } = require('./middleware/secureLogger');
 const { validateHmacSignature } = require('./middleware/hmac.middleware');
+const { cookieParserMiddleware } = require('./middleware/csrf.middleware');
 const env = require('./config/env');
 
 const app = express();
@@ -67,7 +68,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // ===========================================
-// 4. BODY PARSING (with size limits - FIX #17)
+// 4. COOKIE PARSER (for CSRF tokens)
+// ===========================================
+app.use(cookieParserMiddleware);
+
+// ===========================================
+// 5. BODY PARSING (with size limits - FIX #17)
 // ===========================================
 app.use(express.json({ 
   limit: '1mb',
@@ -81,7 +87,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ===========================================
-// 5. HTTPS REDIRECT (FIX #16)
+// 6. HTTPS REDIRECT (FIX #16)
 // ===========================================
 app.use((req, res, next) => {
   // Check if request is not secure (HTTP instead of HTTPS)
@@ -95,12 +101,12 @@ app.use((req, res, next) => {
 });
 
 // ===========================================
-// 6. HMAC VALIDATION (FIX #2 - GLOBAL MOUNTING)
+// 7. HMAC VALIDATION (FIX #2 - GLOBAL MOUNTING)
 // ===========================================
 // Apply HMAC to internal API routes only (not webhooks or public routes)
 app.use('/api/v1', (req, res, next) => {
   // Skip HMAC for public routes
-  const publicRoutes = ['/health', '/auth/signin', '/auth/signup', '/auth/refresh'];
+  const publicRoutes = ['/health', '/auth/signin', '/auth/signup', '/auth/refresh', '/auth/csrf-token'];
   const isPublicRoute = publicRoutes.some(route => req.path.startsWith(route));
   
   // Skip HMAC for webhooks (they have their own signature validation)
@@ -131,7 +137,7 @@ app.get('/', (req, res) => {
 });
 
 // ===========================================
-// 7. ERROR HANDLERS
+// 8. ERROR HANDLERS
 // ===========================================
 if (env.NODE_ENV === 'production' && env.SENTRY_DSN) {
   app.use(Sentry.Handlers.errorHandler());
