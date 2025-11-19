@@ -14,7 +14,7 @@ try {
   }
 } catch (error) {
   if (process.env.NODE_ENV === 'production') {
-    console.warn('⚠️ Redis not available, using memory store for rate limiting');
+    console.warn('⚠️  Redis not available, using memory store for rate limiting');
   }
   store = undefined;
 }
@@ -77,6 +77,10 @@ const uploadLimiter = rateLimit({
   }
 });
 
+/**
+ * API Key Validation with Rotation Support (FIX #9)
+ * Supports multiple API keys for zero-downtime rotation
+ */
 const validateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
   const env = require('../config/env');
@@ -85,17 +89,28 @@ const validateApiKey = (req, res, next) => {
     return res.status(401).json({
       status: 'error',
       code: 401,
-      message: 'API key is required'
+      message: 'API key is required (x-api-key header)'
     });
   }
   
-  // Return 403 for INVALID key (not 401)
-  if (apiKey !== env.INTERNAL_API_KEY) {
+  // Support multiple API keys for rotation
+  const validKeys = [
+    env.INTERNAL_API_KEY,
+    env.INTERNAL_API_KEY_V1, // Old key during rotation
+    env.INTERNAL_API_KEY_V2  // New key during rotation
+  ].filter(Boolean); // Remove undefined keys
+
+  if (!validKeys.includes(apiKey)) {
     return res.status(403).json({
       status: 'error',
       code: 403,
       message: 'Invalid API key'
     });
+  }
+  
+  // Log which key version was used (for rotation monitoring)
+  if (apiKey === env.INTERNAL_API_KEY_V1) {
+    console.warn('⚠️  Old API key (V1) used - consider rotating clients');
   }
   
   next();

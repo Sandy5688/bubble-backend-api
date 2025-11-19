@@ -1,4 +1,3 @@
-const NodeClam = require('clamscan');
 const env = require('../config/env');
 const fs = require('fs').promises;
 
@@ -6,17 +5,21 @@ let clamScanner = null;
 let isClamAvailable = false;
 
 /**
- * Initialize ClamAV scanner
+ * Initialize ClamAV scanner (optional)
  */
 async function initClamAV() {
+  // Check if antivirus scanning is enabled
   if (!env.ENABLE_ANTIVIRUS_SCAN || env.ENABLE_ANTIVIRUS_SCAN === 'false') {
-    console.log('ℹ️  Antivirus scanning disabled');
+    console.log('ℹ️  Antivirus scanning DISABLED by configuration');
+    isClamAvailable = false;
     return null;
   }
 
   try {
+    const NodeClam = require('clamscan');
+    
     clamScanner = await new NodeClam().init({
-      removeInfected: true, // Automatically remove infected files
+      removeInfected: true,
       quarantineInfected: false,
       scanLog: null,
       debugMode: env.NODE_ENV === 'development',
@@ -28,15 +31,15 @@ async function initClamAV() {
       }
     });
 
-    // Test if ClamAV is running
     const version = await clamScanner.getVersion();
     console.log(`✅ ClamAV initialized: ${version}`);
     isClamAvailable = true;
     
     return clamScanner;
   } catch (error) {
-    console.warn('⚠️  ClamAV not available:', error.message);
+    console.warn('⚠️  ClamAV NOT AVAILABLE:', error.message);
     console.warn('⚠️  File uploads will proceed WITHOUT virus scanning!');
+    console.warn('⚠️  To enable: Install ClamAV and set ENABLE_ANTIVIRUS_SCAN=true');
     isClamAvailable = false;
     return null;
   }
@@ -44,22 +47,30 @@ async function initClamAV() {
 
 /**
  * Scan file for viruses
- * @param {string} filePath - Path to file to scan
- * @returns {Promise<{isInfected: boolean, viruses: string[]}>}
  */
 async function scanFile(filePath) {
-  // If ClamAV not initialized, try to initialize
+  // If disabled or not available, skip with clear warning
+  if (!env.ENABLE_ANTIVIRUS_SCAN || env.ENABLE_ANTIVIRUS_SCAN === 'false') {
+    console.warn(`⚠️  ANTIVIRUS DISABLED: Skipping scan for ${filePath}`);
+    return {
+      isInfected: false,
+      viruses: [],
+      skipped: true,
+      reason: 'Antivirus scanning disabled by configuration'
+    };
+  }
+
   if (!clamScanner && !isClamAvailable) {
     await initClamAV();
   }
 
-  // If still not available, skip scanning (with warning)
   if (!clamScanner) {
-    console.warn(`⚠️  Skipping virus scan for ${filePath} - ClamAV unavailable`);
+    console.error(`❌ ANTIVIRUS UNAVAILABLE: Cannot scan ${filePath}`);
     return {
       isInfected: false,
       viruses: [],
-      skipped: true
+      skipped: true,
+      reason: 'ClamAV not available - see server logs'
     };
   }
 
@@ -69,7 +80,6 @@ async function scanFile(filePath) {
     if (isInfected) {
       console.error(`🦠 VIRUS DETECTED in ${filePath}:`, viruses);
       
-      // Delete infected file
       try {
         await fs.unlink(filePath);
         console.log(`✅ Infected file deleted: ${filePath}`);
@@ -85,7 +95,6 @@ async function scanFile(filePath) {
     };
   } catch (error) {
     console.error('Virus scan error:', error);
-    // On scan error, be cautious - treat as potentially infected
     return {
       isInfected: false,
       viruses: [],
@@ -115,6 +124,12 @@ const scanUploadedFile = async (req, res, next) => {
       });
     }
 
+    if (scanResult.skipped) {
+      console.warn(`⚠️  File uploaded WITHOUT antivirus scan: ${req.file.filename}`);
+      console.warn(`⚠️  Reason: ${scanResult.reason}`);
+      // Continue anyway but log the warning
+    }
+
     if (scanResult.error && !scanResult.skipped) {
       console.error('Scan error - rejecting upload as precaution');
       return res.status(500).json({
@@ -124,11 +139,9 @@ const scanUploadedFile = async (req, res, next) => {
       });
     }
 
-    // File is clean, continue
     next();
   } catch (error) {
     console.error('Antivirus middleware error:', error);
-    // On critical error, reject upload as precaution
     return res.status(500).json({
       status: 'error',
       code: 500,

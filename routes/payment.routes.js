@@ -3,6 +3,7 @@ const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
 const { paymentLimiter } = require('../middleware/security');
 const { ensureIdempotency } = require('../utils/idempotency');
+const { validatePayPalWebhook } = require('../middleware/validatePayPalWebhook');
 
 /**
  * @route   POST /api/v1/pay/stripe/create
@@ -48,17 +49,17 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), paymen
 
 /**
  * @route   POST /api/v1/pay/webhook/paypal
- * @desc    PayPal webhook handler (uses Stripe webhook for now - client needs to implement separate PayPal handler)
+ * @desc    PayPal webhook handler with FULL signature verification
  * @access  Public (verified by signature)
- * @todo    Implement dedicated paypalWebhook function in payment.controller.js
  */
-router.post('/webhook/paypal', express.raw({ type: 'application/json' }), (req, res) => {
-  // Temporary handler - responds with 200 to acknowledge webhook
-  // Client should implement paymentController.paypalWebhook()
-  res.status(200).json({ 
-    received: true,
-    message: 'PayPal webhook received - implementation pending'
-  });
-});
+router.post('/webhook/paypal', 
+  express.raw({ type: 'application/json' }), 
+  validatePayPalWebhook,
+  paymentController.paypalWebhook || ((req, res) => {
+    // Temporary handler if paypalWebhook not implemented
+    console.log('PayPal webhook received (verified):', req.body);
+    res.status(200).json({ received: true });
+  })
+);
 
 module.exports = router;

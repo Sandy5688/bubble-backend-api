@@ -4,19 +4,19 @@ const env = require('../config/env');
 /**
  * HMAC Request Signature Validation
  * Prevents replay attacks and ensures request integrity
+ * NOW USES SEPARATE HMAC_SECRET (not API key)
  */
 const validateHmacSignature = (req, res, next) => {
   try {
     const signature = req.headers['x-signature'];
     const timestamp = req.headers['x-timestamp'];
-    const apiKey = req.headers['x-api-key'];
 
     // Check required headers
     if (!signature) {
       return res.status(401).json({
         status: 'error',
         code: 401,
-        message: 'Missing x-signature header'
+        message: 'Missing x-signature header (HMAC signature required)'
       });
     }
 
@@ -28,11 +28,13 @@ const validateHmacSignature = (req, res, next) => {
       });
     }
 
-    if (!apiKey) {
-      return res.status(401).json({
+    // Check if HMAC secret is configured
+    if (!env.INTERNAL_HMAC_SECRET) {
+      console.error('CRITICAL: INTERNAL_HMAC_SECRET not configured!');
+      return res.status(500).json({
         status: 'error',
-        code: 401,
-        message: 'Missing x-api-key header'
+        code: 500,
+        message: 'Server configuration error'
       });
     }
 
@@ -45,16 +47,7 @@ const validateHmacSignature = (req, res, next) => {
       return res.status(401).json({
         status: 'error',
         code: 401,
-        message: 'Request timestamp expired (replay attack prevention)'
-      });
-    }
-
-    // Validate API key first
-    if (apiKey !== env.INTERNAL_API_KEY) {
-      return res.status(403).json({
-        status: 'error',
-        code: 403,
-        message: 'Invalid API key'
+        message: 'Request timestamp expired (max 5 minutes). Possible replay attack.'
       });
     }
 
@@ -65,9 +58,9 @@ const validateHmacSignature = (req, res, next) => {
     
     const payload = `${method}${path}${timestamp}${body}`;
 
-    // Generate HMAC signature
+    // Generate HMAC signature using SEPARATE secret
     const expectedSignature = crypto
-      .createHmac('sha256', env.HMAC_SECRET)
+      .createHmac('sha256', env.INTERNAL_HMAC_SECRET)
       .update(payload)
       .digest('hex');
 
@@ -79,7 +72,7 @@ const validateHmacSignature = (req, res, next) => {
       return res.status(403).json({
         status: 'error',
         code: 403,
-        message: 'Invalid signature'
+        message: 'Invalid HMAC signature'
       });
     }
 
@@ -87,7 +80,7 @@ const validateHmacSignature = (req, res, next) => {
       return res.status(403).json({
         status: 'error',
         code: 403,
-        message: 'Invalid signature'
+        message: 'Invalid HMAC signature'
       });
     }
 

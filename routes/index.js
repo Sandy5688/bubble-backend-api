@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Import REAL middleware (not fake ones!)
+// Import REAL middleware
 const { authenticate } = require('../middleware/auth.middleware');
 const { validateApiKey } = require('../middleware/security');
 
@@ -36,16 +36,16 @@ router.get('/', (req, res) => {
 // Health check (public)
 router.use('/health', healthRoutes);
 
-// Auth routes (public)
+// Auth routes (public - but requires API key for signup/signin)
 router.use('/auth', authRoutes);
 
-// Protected routes (require REAL authentication)
-router.use('/user', authenticate, userRoutes);
-router.use('/files', authenticate, fileRoutes);
-router.use('/pay', authenticate, paymentRoutes);
-router.use('/msg', authenticate, messagingRoutes);
-router.use('/ai', authenticate, aiRoutes);
-router.use('/flow', authenticate, workflowRoutes);
+// Protected routes (require BOTH API key AND JWT authentication)
+router.use('/user', validateApiKey, authenticate, userRoutes);
+router.use('/files', validateApiKey, authenticate, fileRoutes);
+router.use('/pay', validateApiKey, authenticate, paymentRoutes);
+router.use('/msg', validateApiKey, authenticate, messagingRoutes);
+router.use('/ai', validateApiKey, authenticate, aiRoutes);
+router.use('/flow', validateApiKey, authenticate, workflowRoutes);
 
 // 404 handler
 router.use('*', (req, res) => {

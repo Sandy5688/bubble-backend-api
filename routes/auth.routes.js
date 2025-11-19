@@ -4,26 +4,36 @@ const authController = require('../controllers/auth.controller');
 const { authLimiter } = require('../middleware/security');
 const { loginBruteForce, passwordResetBruteForce, signupBruteForce } = require('../middleware/bruteForce.middleware');
 const { auditLog, SENSITIVE_ACTIONS } = require('../middleware/auditLog.middleware');
+const { csrfProtection, getCsrfToken } = require('../middleware/csrf.middleware');
+
+/**
+ * @route   GET /api/v1/auth/csrf-token
+ * @desc    Get CSRF token for forms
+ * @access  Public
+ */
+router.get('/csrf-token', csrfProtection, getCsrfToken);
 
 /**
  * @route   POST /api/v1/auth/signup
- * @desc    User signup (with brute force protection & audit logging)
+ * @desc    User signup (with brute force protection, CSRF & audit logging)
  * @access  Public
  */
 router.post('/signup', 
+  csrfProtection,
   signupBruteForce, 
   auditLog(SENSITIVE_ACTIONS.ACCOUNT_CREATED, 'user'),
-  authController.signUp  // Note: signUp not signup
+  authController.signUp
 );
 
 /**
  * @route   POST /api/v1/auth/signin
- * @desc    User signin (with brute force protection)
+ * @desc    User signin (with brute force protection & CSRF)
  * @access  Public
  */
 router.post('/signin', 
+  csrfProtection,
   loginBruteForce,
-  authController.signIn  // Note: signIn not signin
+  authController.signIn
 );
 
 /**
@@ -31,14 +41,15 @@ router.post('/signin',
  * @desc    User signout
  * @access  Public
  */
-router.post('/signout', authLimiter, authController.signOut);
+router.post('/signout', csrfProtection, authLimiter, authController.signOut);
 
 /**
  * @route   POST /api/v1/auth/reset-password
- * @desc    Request password reset (with brute force protection & audit logging)
+ * @desc    Request password reset (with brute force protection, CSRF & audit logging)
  * @access  Public
  */
 router.post('/reset-password', 
+  csrfProtection,
   passwordResetBruteForce,
   auditLog(SENSITIVE_ACTIONS.PASSWORD_CHANGED, 'user'),
   authController.resetPassword
