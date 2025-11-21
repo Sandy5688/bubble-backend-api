@@ -8,6 +8,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { secureRequestLogger } = require('./middleware/secureLogger');
 const { validateHmacSignature } = require('./middleware/hmac.middleware');
 const { cookieParserMiddleware } = require('./middleware/csrf.middleware');
+const regionDetector = require('./middleware/region/regionDetector');
 const env = require('./config/env');
 
 const app = express();
@@ -62,7 +63,8 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-signature", "x-timestamp", "X-CSRF-Token", "x-idempotency-key"]
+  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-signature", "x-timestamp", "X-CSRF-Token", "x-idempotency-key", "X-GPS-Lat-Long"],
+  exposedHeaders: ["X-Vogue-Region"]
 };
 
 app.use(cors(corsOptions));
@@ -73,12 +75,11 @@ app.use(cors(corsOptions));
 app.use(cookieParserMiddleware);
 
 // ===========================================
-// 5. BODY PARSING (with size limits - FIX #17)
+// 5. BODY PARSING (with size limits)
 // ===========================================
 app.use(express.json({ 
   limit: '1mb',
   verify: (req, res, buf) => {
-    // Store raw body for webhook signature verification
     if (req.originalUrl.includes('/webhook')) {
       req.rawBody = buf.toString('utf8');
     }
@@ -87,10 +88,9 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ===========================================
-// 6. HTTPS REDIRECT (FIX #16)
+// 6. HTTPS REDIRECT
 // ===========================================
 app.use((req, res, next) => {
-  // Check if request is not secure (HTTP instead of HTTPS)
   const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
   
   if (!isSecure && env.NODE_ENV === 'production') {
@@ -101,24 +101,24 @@ app.use((req, res, next) => {
 });
 
 // ===========================================
-// 7. HMAC VALIDATION (FIX #2 - GLOBAL MOUNTING)
+// 7. HMAC VALIDATION (GLOBAL MOUNTING)
 // ===========================================
-// Apply HMAC to internal API routes only (not webhooks or public routes)
 app.use('/api/v1', (req, res, next) => {
-  // Skip HMAC for public routes
   const publicRoutes = ['/health', '/auth/signin', '/auth/signup', '/auth/refresh', '/auth/csrf-token'];
   const isPublicRoute = publicRoutes.some(route => req.path.startsWith(route));
-  
-  // Skip HMAC for webhooks (they have their own signature validation)
   const isWebhook = req.path.includes('/webhook');
   
   if (isPublicRoute || isWebhook) {
     return next();
   }
   
-  // Apply HMAC validation to all other routes
   validateHmacSignature(req, res, next);
 });
+
+// ===========================================
+// 8. REGION DETECTION (NEW - RUNS ON EVERY REQUEST)
+// ===========================================
+app.use(regionDetector);
 
 // Secure request logging
 app.use(secureRequestLogger);
@@ -132,12 +132,13 @@ app.get('/', (req, res) => {
     message: 'Bubble Backend API',
     version: '1.0.0',
     status: 'operational',
-    environment: env.NODE_ENV
+    environment: env.NODE_ENV,
+    region: req.context ? `${req.context.countryCode}${req.context.regionCode ? '-' + req.context.regionCode : ''}` : 'unknown'
   });
 });
 
 // ===========================================
-// 8. ERROR HANDLERS
+// 9. ERROR HANDLERS
 // ===========================================
 if (env.NODE_ENV === 'production' && env.SENTRY_DSN) {
   app.use(Sentry.Handlers.errorHandler());

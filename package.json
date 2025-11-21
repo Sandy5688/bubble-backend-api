@@ -10,7 +10,8 @@
     "test:watch": "jest --watch --setupFiles=./tests/setup.js",
     "test:coverage": "jest --coverage --setupFiles=./tests/setup.js",
     "lint": "eslint .",
-    "migrate": "node database/migrate.js"
+    "migrate": "node database/migrate.js",
+    "test:region": "jest tests/integration/region.test.js tests/unit/regionService.test.js"
   },
   "keywords": [
     "bubble",
@@ -28,8 +29,9 @@
     "@sentry/profiling-node": "^10.25.0",
     "@sentry/tracing": "^7.120.4",
     "@supabase/supabase-js": "^2.39.3",
+    "@types/geoip-lite": "^1.4.4",
     "aws-sdk": "^2.1532.0",
-    "axios": "^1.6.5",
+    "axios": "^1.13.2",
     "bullmq": "^5.1.5",
     "clamscan": "^2.4.0",
     "cookie-parser": "^1.4.7",
@@ -39,9 +41,11 @@
     "envalid": "^8.0.0",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
+    "geoip-lite": "^1.4.10",
     "helmet": "^7.1.0",
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
+    "maxmind": "^5.0.1",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.24.1",
     "pg": "^8.11.3",
@@ -56,6 +60,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/maxmind": "^2.0.5",
     "eslint": "^8.56.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
