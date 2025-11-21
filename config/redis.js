@@ -102,6 +102,6 @@ if (env.NODE_ENV !== 'test') {
 }
 
 module.exports = getRedisClient();
-module.exports.getRedisClient = getRedisClient;
-module.exports.closeRedis = closeRedis;
-module.exports.isAvailable = () => isRedisAvailable;
+if (module.exports) { module.exports.getRedisClient = getRedisClient; }
+if (module.exports) { module.exports.closeRedis = closeRedis; }
+if (module.exports) { module.exports.isAvailable = () => isRedisAvailable; }
