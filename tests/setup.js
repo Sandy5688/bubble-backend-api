@@ -6,12 +6,13 @@ process.env.INTERNAL_HMAC_SECRET = 'test-hmac-secret-for-testing-at-least-32-cha
 
 // Supabase test config
 process.env.SUPABASE_URL = 'https://test.supabase.co';
+process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 
 // Encryption test config
 process.env.ENCRYPTION_KEY = 'test-encryption-key-32-chars-min';
 
-// Redis test config (optional)
+// Redis test config
 process.env.REDIS_URL = 'redis://localhost:6379';
 
 // Suppress console logs during tests
