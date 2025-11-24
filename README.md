@@ -1,173 +1,182 @@
-# Bubble Backend API 🚀
+# 🚀 Bubble Backend API
 
-Enterprise-grade backend API with authentication, file storage, payments, messaging, and AI features.
+Enterprise-grade backend API with KYC verification, authentication, and payment processing.
 
-## 🌟 Features
-
-- ✅ **Authentication** - JWT-based auth with Supabase
-- ✅ **File Storage** - AWS S3 with antivirus scanning
-- ✅ **Payments** - Stripe & PayPal integration
-- ✅ **Messaging** - Email (SendGrid) & SMS (Twilio)
-- ✅ **AI Features** - OpenAI GPT integration
-- ✅ **Workflow Automation** - BullMQ job processing
-- ✅ **Security** - HMAC signing, rate limiting, input validation
-- ✅ **Monitoring** - Health checks, error tracking
-
-## 📋 Prerequisites
-
-- Node.js 18+
-- Redis (for rate limiting)
-- PostgreSQL (via Supabase)
-- AWS S3 account
-- Stripe/PayPal accounts
-- SendGrid/Twilio accounts
-- OpenAI API key
+## 📁 Project Structure
+```
+bubble-backend-api/
+├── config/              # Configuration files
+│   ├── database.js     # PostgreSQL & Supabase
+│   ├── env.js          # Environment variables
+│   └── monitoring.js   # Logging & monitoring
+├── controllers/         # Business logic
+│   ├── auth/           # Authentication controllers
+│   ├── kyc/            # KYC verification
+│   └── payment/        # Payment processing
+├── middleware/          # Express middleware
+│   ├── auth.middleware.js
+│   ├── hmac.middleware.js
+│   └── region/
+├── routes/              # API routes
+│   ├── auth/           # Auth & account routes
+│   ├── kyc/            # KYC routes
+│   └── payment/        # Payment routes
+├── services/            # External services
+│   ├── auth/           # Auth services (Google, Apple)
+│   ├── kyc/            # KYC services
+│   ├── payment/        # Stripe integration
+│   └── storage/        # AWS S3
+├── migrations/          # Database migrations
+├── scripts/             # Utility scripts
+├── tests/               # Test suite
+├── docs/                # Documentation
+└── utils/               # Utilities
+```
 
 ## 🚀 Quick Start
 
-### 1. Clone & Install
-```bash
-git clone https://github.com/yourusername/bubble-backend-api.git
-cd bubble-backend-api
-npm install
-```
+### Prerequisites
+- Node.js 18+
+- PostgreSQL
+- Railway account (or any PaaS)
 
-### 2. Environment Setup
+### Installation
 ```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
 cp .env.example .env
 # Edit .env with your credentials
-```
 
-### 3. Run
-```bash
-# Development
-npm run dev
+# Run migrations
+node scripts/migrations/run-migration.js
 
-# Production
+# Start server
 npm start
-
-# With PM2
-npm run pm2:start
 ```
 
-### 4. Test
-```bash
-npm test
-npm run test:coverage
-```
+## 📚 API Documentation
 
-## 📚 Documentation
+### Authentication Endpoints
+- `POST /api/v1/auth/signup` - Register user
+- `POST /api/v1/auth/signin` - Login user
+- `POST /api/v1/auth/refresh` - Refresh token
+- `POST /api/v1/auth/logout` - Logout
+- `GET /api/v1/auth/google/start` - Google OAuth
+- `POST /api/v1/auth/google/callback` - Google callback
 
-- [API Documentation](./API_DOCUMENTATION.md)
-- [Security Checklist](./SECURITY_CHECKLIST.md)
-- [Post-Deploy Checklist](./POST_DEPLOY_CHECKLIST.md)
+### Account Management
+- `POST /api/v1/account/delete/request` - Request deletion (30-day grace)
+- `POST /api/v1/account/delete/cancel` - Cancel deletion
+- `DELETE /api/v1/account/delete/immediate` - Immediate deletion
+- `GET /api/v1/account/delete/status` - Check deletion status
 
-## 🔒 Security
+### KYC Endpoints
+- `POST /api/v1/kyc/start` - Start KYC session
+- `POST /api/v1/kyc/consent` - Submit consent
+- `GET /api/v1/kyc/options` - Get ID options
+- `POST /api/v1/kyc/upload-url` - Get S3 upload URL
+- `POST /api/v1/kyc/confirm-upload` - Confirm upload
+- `POST /api/v1/kyc/send-otp` - Send OTP
+- `POST /api/v1/kyc/verify-otp` - Verify OTP
+- `GET /api/v1/kyc/status/:id` - Get KYC status
 
-This API implements enterprise-grade security:
+### Payment Endpoints
+- `POST /api/v1/payment/create-customer` - Create Stripe customer
+- `POST /api/v1/payment/add-payment-method` - Add payment method
+- `POST /api/v1/payment/create-subscription` - Create subscription
+- `POST /api/v1/payment/cancel-subscription/:id` - Cancel subscription
+- `GET /api/v1/payment/subscription/:id` - Get subscription
+- `POST /api/v1/payment/webhook` - Stripe webhook
 
-- ✅ HMAC request signing
-- ✅ JWT authentication
-- ✅ Redis-backed rate limiting
-- ✅ Input validation (Zod)
-- ✅ File type validation
-- ✅ Webhook signature verification
-- ✅ Encrypted secrets
-- ✅ CORS & Helmet hardening
-- ✅ Security audit pipeline
+## 🔐 Security Features
 
-See [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md) for details.
+- ✅ bcrypt password hashing (12 rounds)
+- ✅ JWT access tokens (15min) + refresh tokens (7 days)
+- ✅ Token rotation on refresh
+- ✅ HMAC request validation
+- ✅ Rate limiting
+- ✅ CORS & security headers
+- ✅ OTP verification (SHA-256 hashed)
+- ✅ Audit logging
+- ✅ GDPR-compliant account deletion
 
-## 🏗️ Architecture
-```
-bubble-backend-api/
-├── config/          # Configuration files
-├── controllers/     # Route controllers
-├── middleware/      # Express middleware
-├── routes/          # API routes
-├── services/        # Business logic
-├── utils/           # Utilities
-├── tests/           # Test suites
-└── docs/            # Documentation
-```
+## 📊 Database
+
+12 tables:
+- `users` - User accounts
+- `refresh_tokens` - JWT refresh tokens
+- `login_events` - Login history
+- `kyc_sessions` - KYC workflow
+- `kyc_documents` - Document metadata
+- `kyc_audit_logs` - Compliance logs
+- `otp_codes` - OTP verification
+- `magic_links` - Magic link auth
+- `payment_customers` - Stripe customers
+- `subscriptions` - Subscription management
+- `payment_events` - Webhook logs
+- `data_deletion_requests` - GDPR deletions
 
 ## 🧪 Testing
 ```bash
-npm test              # Run all tests
-npm run test:watch   # Watch mode
-npm run test:coverage # Coverage report
+# Run all tests
+npm test
+
+# Run linter
+npm run lint
+
+# Check coverage
+npm run test:coverage
 ```
 
-45/45 tests passing ✅
+## 🚀 Deployment
 
-## 📊 Monitoring
+Currently deployed on Railway: https://bubble-backend-api-production.up.railway.app
 
-Health Check: `GET /api/v1/health?detailed=true`
-
-Returns status of:
-- Database connection
-- Redis connection
-- S3 availability
-- Memory usage
-
-## 🚢 Deployment
-
-### Railway
+### Deploy to Railway
 ```bash
-git push origin main
-# Auto-deploys via GitHub Actions
+# Install Railway CLI
+npm i -g @railway/cli
+
+# Login
+railway login
+
+# Link project
+railway link
+
+# Deploy
+railway up
 ```
 
-### Docker
-```bash
-docker build -t bubble-backend-api .
-docker run -p 8080:8080 --env-file .env bubble-backend-api
-```
+## 📝 Environment Variables
 
-### PM2
-```bash
-npm run pm2:start
-npm run pm2:logs
-npm run pm2:reload
-```
+See `.env.example` for required variables.
 
-## 📦 Environment Variables
+## 📖 Documentation
 
-See [.env.example](./.env.example) for all required variables.
+- [Implementation Guide](docs/IMPLEMENTATION_COMPLETE.md)
+- [Test Results](docs/TEST_RESULTS.md)
+- [Success Summary](docs/FINAL_SUCCESS.md)
 
-Critical variables:
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-- `JWT_SECRET`, `INTERNAL_API_KEY`
-- `SENDGRID_API_KEY`, `TWILIO_AUTH_TOKEN`
-- `OPENAI_API_KEY`
+## 🤝 Contributing
 
-## 🔧 CI/CD
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
-GitHub Actions pipeline runs on every push:
-- ✅ Linting
-- ✅ Tests
-- ✅ Security audit
-- ✅ Auto-deploy (main branch)
+## 📄 License
 
-## 📝 License
-
-MIT License - see LICENSE file
+This project is proprietary and confidential.
 
 ## 👥 Support
 
-- Issues: https://github.com/yourusername/bubble-backend-api/issues
-- Email: support@yourdomain.com
-
-## 🎯 Project Stats
-
-- **Files:** 92
-- **Lines of Code:** 4,868+
-- **Tests:** 45 (100% passing)
-- **Test Coverage:** 85%+
-- **Security Score:** A+
+For support, email support@bubble.com or open an issue.
 
 ---
 
-Built with ❤️ for production use.
+**Status:** ✅ Production Ready  
+**Version:** 1.0.0  
+**Last Updated:** November 24, 2024
