@@ -106,15 +106,17 @@ const signIn = async (req, res) => {
     res.status(500).json({ success: false, error: 'Login failed' });
   }
 };
-};
-  signUp,
-  signIn,
-};
 
 const signOut = async (req, res) => {
   try {
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
+    res.status(500).json({ success: false, error: 'Logout failed' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  res.status(501).json({ success: false, message: 'Not implemented yet' });
 };
 
 const verifyEmail = async (req, res) => {
@@ -122,12 +124,6 @@ const verifyEmail = async (req, res) => {
 };
 
 module.exports = {
-  signUp,
-  signIn,
-  signOut,
-  resetPassword,
-  verifyEmail,
-};
   signUp,
   signIn,
   signOut,
