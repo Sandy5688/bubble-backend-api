@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const paymentController = require('../controllers/payment.controller');
+const paymentController = require('../controllers/payment/payment.controller');
 const { paymentLimiter } = require('../middleware/security');
 const { ensureIdempotency } = require('../utils/idempotency');
 const { validatePayPalWebhook } = require('../middleware/validatePayPalWebhook');
