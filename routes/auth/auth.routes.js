@@ -10,3 +10,7 @@ router.get('/google/start', authController.googleStart);
 router.post('/google/callback', authController.googleCallback);
 
 module.exports = router;
+
+// Apple Sign-In routes
+router.get('/apple/start', authController.appleStart);
+router.post('/apple/callback', authController.appleCallback);

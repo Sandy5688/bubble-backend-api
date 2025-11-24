@@ -188,3 +188,75 @@ module.exports = {
   googleStart,
   googleCallback,
 };
+
+/**
+ * Start Apple Sign-In
+ */
+const appleStart = async (req, res) => {
+  try {
+    const appleAuthUrl = `https://appleid.apple.com/auth/authorize?client_id=${process.env.APPLE_CLIENT_ID}&redirect_uri=${process.env.APPLE_REDIRECT_URI}&response_type=code id_token&response_mode=form_post&scope=email name`;
+
+    res.json({
+      success: true,
+      data: { authUrl: appleAuthUrl }
+    });
+  } catch (error) {
+    logger.error('Apple start failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to start Apple sign-in' });
+  }
+};
+
+/**
+ * Handle Apple callback
+ */
+const appleCallback = async (req, res) => {
+  try {
+    const { id_token, user } = req.body;
+
+    if (!id_token) {
+      return res.status(400).json({ success: false, error: 'Missing ID token' });
+    }
+
+    const appleService = require('../../services/auth/apple.auth.service');
+    const userRecord = await appleService.handleAppleCallback(id_token, user ? JSON.parse(user) : null);
+
+    // Generate JWT tokens
+    const jwtUtil = require('../../utils/jwt.util');
+    const accessToken = jwtUtil.generateAccessToken({
+      userId: userRecord.id,
+      email: userRecord.email,
+      role: userRecord.role || 'user'
+    });
+
+    const refreshToken = jwtUtil.generateRefreshToken({
+      userId: userRecord.id
+    });
+
+    // Store refresh token
+    await query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+      [userRecord.id, refreshToken]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: userRecord.id,
+          email: userRecord.email
+        },
+        tokens: {
+          accessToken,
+          refreshToken
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Apple callback failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Apple sign-in failed' });
+  }
+};
+
+module.exports.appleStart = appleStart;
+module.exports.appleCallback = appleCallback;
