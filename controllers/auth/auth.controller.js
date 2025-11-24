@@ -281,3 +281,176 @@ module.exports.getMe = async (req, res) => {
 };
 module.exports.googleStart = googleStart;
 module.exports.googleCallback = googleCallback;
+
+/**
+ * Link Google account to existing user
+ */
+const linkGoogle = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, error: 'ID token required' });
+    }
+
+    const googleService = require('../../services/auth/google.auth.service');
+    const googleData = await googleService.verifyGoogleToken(idToken);
+
+    // Check if Google account already linked to another user
+    const existing = await query(
+      'SELECT id FROM users WHERE external_provider = $1 AND external_provider_id = $2',
+      ['google', googleData.sub]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'This Google account is already linked to another user' 
+      });
+    }
+
+    // Link Google to current user
+    await query(
+      `UPDATE users 
+       SET external_provider = 'google', 
+           external_provider_id = $1, 
+           email_verified = TRUE 
+       WHERE id = $2`,
+      [googleData.sub, userId]
+    );
+
+    logger.info('Google account linked', { userId, googleId: googleData.sub });
+
+    res.json({
+      success: true,
+      message: 'Google account linked successfully'
+    });
+  } catch (error) {
+    logger.error('Link Google failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to link Google account' });
+  }
+};
+
+/**
+ * Link Apple account to existing user
+ */
+const linkApple = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, error: 'ID token required' });
+    }
+
+    const appleService = require('../../services/auth/apple.auth.service');
+    const appleData = await appleService.verifyAppleToken(idToken);
+
+    // Check if Apple account already linked to another user
+    const existing = await query(
+      'SELECT id FROM users WHERE external_provider = $1 AND external_provider_id = $2',
+      ['apple', appleData.sub]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'This Apple account is already linked to another user' 
+      });
+    }
+
+    // Link Apple to current user
+    await query(
+      `UPDATE users 
+       SET external_provider = 'apple', 
+           external_provider_id = $1, 
+           email_verified = TRUE 
+       WHERE id = $2`,
+      [appleData.sub, userId]
+    );
+
+    logger.info('Apple account linked', { userId, appleId: appleData.sub });
+
+    res.json({
+      success: true,
+      message: 'Apple account linked successfully'
+    });
+  } catch (error) {
+    logger.error('Link Apple failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to link Apple account' });
+  }
+};
+
+module.exports.linkGoogle = linkGoogle;
+module.exports.linkApple = linkApple;
+
+/**
+ * Change password (requires old password)
+ */
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Old password and new password required' 
+      });
+    }
+
+    // Get user
+    const userResult = await query('SELECT password_hash FROM users WHERE id = $1', [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    if (!user.password_hash) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cannot change password for OAuth-only accounts' 
+      });
+    }
+
+    // Verify old password
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(oldPassword, user.password_hash);
+
+    if (!validPassword) {
+      return res.status(401).json({ success: false, error: 'Incorrect old password' });
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'New password must be at least 8 characters' 
+      });
+    }
+
+    // Hash new password
+    const newHash = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, userId]);
+
+    // Revoke all refresh tokens (force re-login on all devices)
+    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+
+    logger.info('Password changed', { userId });
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully. Please login again on all devices.'
+    });
+  } catch (error) {
+    logger.error('Change password failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to change password' });
+  }
+};
+
+module.exports.changePassword = changePassword;

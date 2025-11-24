@@ -159,3 +159,59 @@ module.exports.stripeWebhook = async (req, res) => {
 module.exports.paypalWebhook = async (req, res) => {
   res.status(501).json({ success: false, message: 'PayPal not implemented yet' });
 };
+
+/**
+ * Record billing consent
+ */
+const recordBillingConsent = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { consentVersion, termsAccepted } = req.body;
+
+    if (!termsAccepted) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Terms must be accepted' 
+      });
+    }
+
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    // Update user billing consent
+    await query(
+      `UPDATE users 
+       SET billing_consent = TRUE, 
+           last_billing_consent_at = NOW() 
+       WHERE id = $1`,
+      [userId]
+    );
+
+    // Log to audit trail
+    await query(
+      `INSERT INTO kyc_audit_logs (user_id, action, details, timestamp)
+       VALUES ($1, 'billing_consent_granted', $2, NOW())`,
+      [
+        userId,
+        JSON.stringify({
+          consentVersion: consentVersion || 'v1.0',
+          ip,
+          userAgent,
+          timestamp: new Date().toISOString()
+        })
+      ]
+    );
+
+    logger.info('Billing consent recorded', { userId });
+
+    res.json({
+      success: true,
+      message: 'Billing consent recorded successfully'
+    });
+  } catch (error) {
+    logger.error('Record billing consent failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to record consent' });
+  }
+};
+
+module.exports.recordBillingConsent = recordBillingConsent;

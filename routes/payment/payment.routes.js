@@ -11,3 +11,6 @@ router.get('/subscription/:subscriptionId', authenticate, paymentController.getS
 router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleWebhook);
 
 module.exports = router;
+
+// Billing Consent
+router.post('/billing-consent', authenticate, paymentController.recordBillingConsent);

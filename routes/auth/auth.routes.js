@@ -14,3 +14,10 @@ module.exports = router;
 // Apple Sign-In routes
 router.get('/apple/start', authController.appleStart);
 router.post('/apple/callback', authController.appleCallback);
+
+// Account Linking
+router.post('/link/google', authenticate, authController.linkGoogle);
+router.post('/link/apple', authenticate, authController.linkApple);
+
+// Password Management
+router.post('/change-password', authenticate, authController.changePassword);
