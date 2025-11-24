@@ -60,17 +60,6 @@ const changeIDType = async (req, res) => {
   }
 };
 
-module.exports = {
-  startKYC,
-  submitConsent,
-  getOptions,
-  getUploadUrl,
-  confirmUpload,
-  sendOTP,
-  verifyOTP,
-  getStatus,
-  changeIDType,
-};
 
 /**
  * Send OTP
