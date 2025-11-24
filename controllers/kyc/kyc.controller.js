@@ -235,3 +235,9 @@ const confirmUpload = async (req, res) => {
 
 module.exports.getUploadUrl = getUploadUrl;
 module.exports.confirmUpload = confirmUpload;
+
+module.exports.startKYC = startKYC;
+module.exports.submitConsent = submitConsent;
+module.exports.getOptions = getOptions;
+module.exports.getStatus = getStatus;
+module.exports.changeIDType = changeIDType;
