@@ -112,7 +112,11 @@ app.use('/api/v1', (req, res, next) => {
     return next();
   }
   
-  validateHmacSignature(req, res, next);
+  if (!req.path.startsWith("/api/v1/auth")) {
+    validateHmacSignature(req, res, next);
+  } else {
+    next();
+  }
 });
 
 // ===========================================
