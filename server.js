@@ -53,9 +53,9 @@ module.exports = server;
 
 // Start background workers
 if (process.env.NODE_ENV !== 'test') {
-  const kycProcessor = require('./workers/private/kyc-processor');
-  const gdprWorker = require('./workers/private/gdpr-deletion.worker');
-  const purgeWorker = require('./workers/private/purge-jobs.worker');
+  require = require('./workers/private/kyc-processor');
+  require = require('./workers/private/gdpr-deletion.worker');
+  require = require('./workers/private/purge-jobs.worker');
   
   logger.info('🤖 Starting background workers...');
   // Workers auto-start in their constructors

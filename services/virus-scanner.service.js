@@ -71,7 +71,7 @@ class VirusScanner {
   /**
    * Simulate virus scan (replace with real implementation)
    */
-  async simulateScan(s3Key) {
+  async simulateScan(_s3Key) {
     // Simulate scan delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
