@@ -51,7 +51,6 @@ process.on('SIGINT', () => {
 
 module.exports = server;
 
-}
 // Start background workers
 if (process.env.NODE_ENV === 'production' && process.env.START_WORKERS === 'true') {
   require('./workers/private/kyc-processor');
