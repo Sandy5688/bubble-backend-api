@@ -59,3 +59,10 @@ async function semanticCompare(_dataA, _dataB) {
 logger.info('✅ Comparison Engine worker started');
 
 module.exports = queues.comparisonEngine;
+
+// Only start in production with explicit flag
+if (process.env.NODE_ENV === 'production' && process.env.START_WORKERS === 'true') {
+  // Worker will start automatically
+} else {
+  module.exports = { start: () => console.log('Worker disabled') };
+}

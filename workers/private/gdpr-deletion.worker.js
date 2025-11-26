@@ -139,3 +139,10 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = worker;
+
+// Only start in production with explicit flag
+if (process.env.NODE_ENV === 'production' && process.env.START_WORKERS === 'true') {
+  // Worker will start automatically
+} else {
+  module.exports = { start: () => console.log('Worker disabled') };
+}

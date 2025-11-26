@@ -2,16 +2,24 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../../controllers/payment/payment.controller');
 const { authenticate } = require('../../middleware/auth.middleware');
+const { requireValidKYC } = require('../../middleware/kyc.middleware');
 const { verifyStripeWebhook, checkDuplicateEvent } = require('../../middleware/stripe-webhook.middleware');
 
-// Customer & Subscription Management
-router.post('/create-customer', authenticate, paymentController.createCustomer);
-router.post('/add-payment-method', authenticate, paymentController.addPaymentMethod);
-router.post('/create-subscription', authenticate, paymentController.createSubscription);
-router.post('/cancel-subscription/:subscriptionId', authenticate, paymentController.cancelSubscription);
-router.get('/subscription/:subscriptionId', authenticate, paymentController.getSubscription);
+// All payment routes require authentication + valid KYC
+router.use(authenticate);
+router.use(requireValidKYC);
 
-// Webhooks with signature verification + deduplication
+// Customer & Subscription Management
+router.post('/create-customer', paymentController.createCustomer);
+router.post('/add-payment-method', paymentController.addPaymentMethod);
+router.post('/create-subscription', paymentController.createSubscription);
+router.post('/cancel-subscription/:subscriptionId', paymentController.cancelSubscription);
+router.get('/subscription/:subscriptionId', paymentController.getSubscription);
+
+// Grace tier activation (no KYC required for this one)
+router.post('/grace-activate', authenticate, paymentController.activateGraceTier);
+
+// Webhooks (no auth/KYC required - verified by signature)
 router.post('/webhook', 
   express.raw({ type: 'application/json' }), 
   verifyStripeWebhook,

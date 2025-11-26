@@ -66,3 +66,10 @@ async function handleAnalyticsService(action, payload) {
 logger.info('✅ External Interaction worker started');
 
 module.exports = queues.externalInteraction;
+
+// Only start in production with explicit flag
+if (process.env.NODE_ENV === 'production' && process.env.START_WORKERS === 'true') {
+  // Worker will start automatically
+} else {
+  module.exports = { start: () => console.log('Worker disabled') };
+}

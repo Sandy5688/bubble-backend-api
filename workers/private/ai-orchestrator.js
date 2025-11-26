@@ -50,3 +50,10 @@ async function classifyInput(payload) {
 logger.info('✅ AI Orchestrator worker started');
 
 module.exports = queues.aiOrchestrator;
+
+// Only start in production with explicit flag
+if (process.env.NODE_ENV === 'production' && process.env.START_WORKERS === 'true') {
+  // Worker will start automatically
+} else {
+  module.exports = { start: () => console.log('Worker disabled') };
+}
