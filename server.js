@@ -52,11 +52,12 @@ process.on('SIGINT', () => {
 module.exports = server;
 
 // Start background workers
+
+// Start background workers
 if (process.env.NODE_ENV !== 'test') {
-  require = require('./workers/private/kyc-processor');
-  require = require('./workers/private/gdpr-deletion.worker');
-  require = require('./workers/private/purge-jobs.worker');
+  require('./workers/private/kyc-processor');
+  require('./workers/private/gdpr-deletion.worker');
+  require('./workers/private/purge-jobs.worker');
   
-  logger.info('🤖 Starting background workers...');
-  // Workers auto-start in their constructors
+  logger.info('🤖 Background workers started');
 }
