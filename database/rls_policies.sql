@@ -1,155 +1,116 @@
--- =====================================================
--- ROW LEVEL SECURITY POLICIES
--- =====================================================
+-- ============================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- Enforce data access controls at database level
+-- ============================================================
 
--- Enable RLS on all tables
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_actions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.files ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.file_metadata ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.parsed_data ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.message_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_trail ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on sensitive tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kyc_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_customers ENABLE ROW LEVEL SECURITY;
 
--- =====================================================
--- USERS POLICIES
--- =====================================================
+-- ============================================================
+-- USERS TABLE POLICIES
+-- ============================================================
 
--- Users can read their own data
-CREATE POLICY "Users can view own profile"
-  ON public.users FOR SELECT
-  USING (auth.uid() = id);
+-- Users can only see their own data
+CREATE POLICY user_select_own ON users
+  FOR SELECT
+  USING (id = current_setting('app.current_user_id')::uuid);
 
 -- Users can update their own data
-CREATE POLICY "Users can update own profile"
-  ON public.users FOR UPDATE
-  USING (auth.uid() = id);
+CREATE POLICY user_update_own ON users
+  FOR UPDATE
+  USING (id = current_setting('app.current_user_id')::uuid);
 
--- Service role has full access (used by backend)
-CREATE POLICY "Service role has full access to users"
-  ON public.users FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- Admin can see all users
+CREATE POLICY admin_select_all_users ON users
+  FOR SELECT
+  USING (current_setting('app.is_admin', true)::boolean = true);
 
--- =====================================================
--- USER PROFILES POLICIES
--- =====================================================
+-- ============================================================
+-- KYC SESSIONS POLICIES
+-- ============================================================
 
-CREATE POLICY "Users can view own profile data"
-  ON public.user_profiles FOR SELECT
-  USING (auth.uid() = user_id);
+-- Users can only see their own KYC sessions
+CREATE POLICY kyc_session_select_own ON kyc_sessions
+  FOR SELECT
+  USING (user_id = current_setting('app.current_user_id')::uuid);
 
-CREATE POLICY "Users can update own profile data"
-  ON public.user_profiles FOR UPDATE
-  USING (auth.uid() = user_id);
+-- Users can insert their own KYC sessions
+CREATE POLICY kyc_session_insert_own ON kyc_sessions
+  FOR INSERT
+  WITH CHECK (user_id = current_setting('app.current_user_id')::uuid);
 
-CREATE POLICY "Service role has full access to profiles"
-  ON public.user_profiles FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- Admin can see all KYC sessions
+CREATE POLICY admin_select_all_kyc ON kyc_sessions
+  FOR SELECT
+  USING (current_setting('app.is_admin', true)::boolean = true);
 
--- =====================================================
--- SESSIONS POLICIES
--- =====================================================
+-- ============================================================
+-- KYC DOCUMENTS POLICIES
+-- ============================================================
 
-CREATE POLICY "Users can view own sessions"
-  ON public.sessions FOR SELECT
-  USING (auth.uid() = user_id);
+-- Users can only see their own documents
+CREATE POLICY kyc_doc_select_own ON kyc_documents
+  FOR SELECT
+  USING (user_id = current_setting('app.current_user_id')::uuid);
 
-CREATE POLICY "Service role has full access to sessions"
-  ON public.sessions FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- Users can insert their own documents
+CREATE POLICY kyc_doc_insert_own ON kyc_documents
+  FOR INSERT
+  WITH CHECK (user_id = current_setting('app.current_user_id')::uuid);
 
--- =====================================================
--- WORKFLOW POLICIES
--- =====================================================
+-- Admin can see all documents
+CREATE POLICY admin_select_all_docs ON kyc_documents
+  FOR SELECT
+  USING (current_setting('app.is_admin', true)::boolean = true);
 
-CREATE POLICY "Users can view own workflows"
-  ON public.workflow_runs FOR SELECT
-  USING (auth.uid() = user_id);
+-- ============================================================
+-- SUBSCRIPTIONS POLICIES
+-- ============================================================
 
-CREATE POLICY "Service role has full access to workflows"
-  ON public.workflow_runs FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- Users can only see their own subscriptions
+CREATE POLICY subscription_select_own ON subscriptions
+  FOR SELECT
+  USING (user_id = current_setting('app.current_user_id')::uuid);
 
-CREATE POLICY "Users can view own workflow actions"
-  ON public.workflow_actions FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.workflow_runs 
-    WHERE workflow_runs.id = workflow_actions.workflow_run_id 
-    AND workflow_runs.user_id = auth.uid()
-  ));
+-- Admin can see all subscriptions
+CREATE POLICY admin_select_all_subscriptions ON subscriptions
+  FOR SELECT
+  USING (current_setting('app.is_admin', true)::boolean = true);
 
-CREATE POLICY "Service role has full access to workflow actions"
-  ON public.workflow_actions FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- ============================================================
+-- PAYMENT CUSTOMERS POLICIES
+-- ============================================================
 
--- =====================================================
--- FILES POLICIES
--- =====================================================
+-- Users can only see their own payment info
+CREATE POLICY payment_customer_select_own ON payment_customers
+  FOR SELECT
+  USING (user_id = current_setting('app.current_user_id')::uuid);
 
-CREATE POLICY "Users can view own files"
-  ON public.files FOR SELECT
-  USING (auth.uid() = user_id OR is_public = true);
+-- Admin can see all payment customers
+CREATE POLICY admin_select_all_payment_customers ON payment_customers
+  FOR SELECT
+  USING (current_setting('app.is_admin', true)::boolean = true);
 
-CREATE POLICY "Users can upload files"
-  ON public.files FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+-- ============================================================
+-- HELPER FUNCTION TO SET USER CONTEXT
+-- ============================================================
 
-CREATE POLICY "Service role has full access to files"
-  ON public.files FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+CREATE OR REPLACE FUNCTION set_user_context(p_user_id uuid, p_is_admin boolean DEFAULT false)
+RETURNS void AS $$
+BEGIN
+  PERFORM set_config('app.current_user_id', p_user_id::text, false);
+  PERFORM set_config('app.is_admin', p_is_admin::text, false);
+END;
+$$ LANGUAGE plpgsql;
 
--- =====================================================
--- MESSAGES POLICIES
--- =====================================================
-
-CREATE POLICY "Users can view own messages"
-  ON public.messages FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Service role has full access to messages"
-  ON public.messages FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
-
--- =====================================================
--- TRANSACTIONS POLICIES
--- =====================================================
-
-CREATE POLICY "Users can view own transactions"
-  ON public.transactions FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Service role has full access to transactions"
-  ON public.transactions FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
-
--- =====================================================
--- AUDIT TRAIL POLICIES
--- =====================================================
-
-CREATE POLICY "Service role can view all audit logs"
-  ON public.audit_trail FOR SELECT
-  USING (auth.jwt()->>'role' = 'service_role');
-
-CREATE POLICY "Service role can insert audit logs"
-  ON public.audit_trail FOR INSERT
-  WITH CHECK (auth.jwt()->>'role' = 'service_role');
-
--- =====================================================
--- SYSTEM CONFIG POLICIES
--- =====================================================
-
-CREATE POLICY "Anyone can view public config"
-  ON public.system_config FOR SELECT
-  USING (is_public = true);
-
-CREATE POLICY "Service role has full access to config"
-  ON public.system_config FOR ALL
-  USING (auth.jwt()->>'role' = 'service_role');
+-- ============================================================
+-- NOTES:
+-- - RLS is enforced at database level
+-- - Application must call set_user_context() after auth
+-- - Admin bypass requires is_admin flag
+-- - All SELECT/INSERT/UPDATE/DELETE operations filtered
+-- ============================================================
