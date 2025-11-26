@@ -6,8 +6,6 @@ ON subscriptions(stripe_subscription_id)
 WHERE stripe_subscription_id IS NOT NULL;
 
 -- Prevent duplicate webhook event processing
-CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_events_event_id 
-ON payment_events(event_id);
 
 -- Prevent duplicate OTP codes per session
 CREATE UNIQUE INDEX IF NOT EXISTS idx_otp_codes_session 

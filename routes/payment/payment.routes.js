@@ -17,7 +17,8 @@ router.post('/cancel-subscription/:subscriptionId', paymentController.cancelSubs
 router.get('/subscription/:subscriptionId', paymentController.getSubscription);
 
 // Grace tier activation (no KYC required for this one)
-router.post('/grace-activate', authenticate, paymentController.activateGraceTier);
+// TODO: Implement activateGraceTier in controller
+// router.post('/grace-activate', authenticate, paymentController.activateGraceTier);
 
 // Webhooks (no auth/KYC required - verified by signature)
 router.post('/webhook', 
