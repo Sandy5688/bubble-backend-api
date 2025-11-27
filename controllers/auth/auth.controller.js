@@ -230,7 +230,7 @@ const appleCallback = async (req, res) => {
       role: userRecord.role || 'user'
     });
 
-    const refreshToken = jwtUtil.generateRefreshToken({
+    const refreshToken = tokenService.generateRefreshToken({
       userId: userRecord.id
     });
 
