@@ -282,7 +282,7 @@ module.exports.getMe = async (req, res) => {
   try {
     const userId = req.userId;
     const result = await query(
-      'SELECT id, email, first_name, last_name, email_verified, created_at, last_login_at, role FROM users WHERE id = $1',
+      'SELECT id, email, full_name, email_verified, created_at, last_login_at, profile_picture_url FROM users WHERE id = $1',
       [userId]
     );
     if (result.rows.length === 0) {
@@ -294,10 +294,9 @@ module.exports.getMe = async (req, res) => {
       data: {
         id: user.id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
+        fullName: user.full_name,
         emailVerified: user.email_verified,
-        role: user.role,
+        profilePicture: user.profile_picture_url,
         createdAt: user.created_at,
         lastLoginAt: user.last_login_at
       }
