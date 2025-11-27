@@ -6,29 +6,38 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const stripeIdempotency = require('../../services/payment/stripe-idempotency.service');
 const logger = createLogger('payment-controller');
 
+
 const createCustomer = async (req, res) => {
   try {
     const { billingEmail } = req.body;
     const email = billingEmail || req.user.email;
-
+    const userId = req.userId || req.user.id;
+    
+    // Check existing
     const existing = await query(
       'SELECT * FROM payment_customers WHERE user_id = $1',
-      [req.userId]
+      [userId]
     );
-
     if (existing.rows.length > 0) {
       return res.json({ success: true, data: existing.rows[0] });
     }
-
-    const customer = await stripeService.createCustomer(req.userId, email);
-
+    
+    // Use idempotent creation
+    const customer = await stripeIdempotency.createCustomerIdempotent(email, userId);
+    
+    // Store in DB
+    await query(
+      `INSERT INTO payment_customers (user_id, stripe_customer_id, email, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [userId, customer.id, email]
+    );
+    
     res.status(201).json({ success: true, data: customer });
   } catch (error) {
     logger.error('Failed to create customer', { error: error.message });
     res.status(500).json({ success: false, error: 'Failed to create customer' });
   }
 };
-
 const addPaymentMethod = async (req, res) => {
   try {
     const customer = await query(
@@ -49,19 +58,40 @@ const addPaymentMethod = async (req, res) => {
   }
 };
 
+
 const createSubscription = async (req, res) => {
   try {
-    const { priceId, paymentMethodId } = req.body;
-
-    const result = await stripeService.createSubscription(req.userId, priceId, paymentMethodId);
-
-    res.status(201).json({ success: true, data: result });
+    const { priceId } = req.body;
+    const userId = req.userId || req.user.id;
+    
+    // Check duplicate
+    await stripeIdempotency.checkDuplicateSubscription(userId, priceId);
+    
+    // Get customer
+    const customerResult = await query(
+      'SELECT stripe_customer_id FROM payment_customers WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (customerResult.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'Create customer first' });
+    }
+    
+    const customerId = customerResult.rows[0].stripe_customer_id;
+    
+    // Create with idempotency
+    const subscription = await stripeIdempotency.createSubscriptionIdempotent(
+      customerId,
+      priceId,
+      userId
+    );
+    
+    res.json({ success: true, data: subscription });
   } catch (error) {
     logger.error('Failed to create subscription', { error: error.message });
-    res.status(500).json({ success: false, error: 'Failed to create subscription' });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
-
 const cancelSubscription = async (req, res) => {
   try {
     const { subscriptionId } = req.params;
