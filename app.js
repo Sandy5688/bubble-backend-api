@@ -104,11 +104,24 @@ app.use((req, res, next) => {
 // 7. HMAC VALIDATION (GLOBAL MOUNTING)
 // ===========================================
 app.use('/api/v1', (req, res, next) => {
-  const isWebhook = req.path.includes('/webhook');
-  const isAuthRoute = req.path.startsWith("/auth") || req.path.startsWith("/account") || req.path.startsWith("/kyc") || req.path.startsWith("/payment") || req.path.startsWith("/magic");
+  const isWebhook = req.path.includes("/webhook");
   const isHealthRoute = req.path.includes("/health") || req.path.includes("/debug");
   
-  if (isAuthRoute || isWebhook || isHealthRoute) {
+  // Only exempt specific public routes from HMAC
+  const publicAuthRoutes = [
+    "/auth/signin",
+    "/auth/signup",
+    "/auth/register",
+    "/auth/refresh",
+    "/auth/csrf-token",
+    "/auth/google",
+    "/auth/apple"
+  ];
+  
+  const isMagicLink = req.path.startsWith("/auth/magic/");
+  const isPublicAuth = publicAuthRoutes.some(route => req.path.includes(route));
+  
+  if (isPublicAuth || isMagicLink || isWebhook || isHealthRoute) {
     return next();
   }
   

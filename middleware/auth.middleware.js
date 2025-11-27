@@ -4,6 +4,17 @@ const { createLogger } = require('../config/monitoring');
 
 const logger = createLogger('auth-middleware');
 
+/**
+ * Set user context for Row Level Security
+ */
+async function setUserContext(userId, userRole = "user") {
+  try {
+    await query("SELECT set_user_context($1, $2)", [userId, userRole]);
+  } catch (error) {
+    logger.warn("Failed to set user context", { error: error.message });
+  }
+}
+
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -29,6 +40,9 @@ const authenticate = async (req, res, next) => {
 
     req.user = result.rows[0];
     req.userId = decoded.userId;
+
+    // Set RLS context for this request
+    await setUserContext(decoded.userId, decoded.role || "user");
 
     next();
   } catch (error) {

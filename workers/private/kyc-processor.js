@@ -98,7 +98,23 @@ class KYCProcessor {
         return;
       }
 
-      // Step 4: Store OCR data
+      // Step 4: Fraud Detection
+      const fraudResult = await fraudDetection.analyze({
+        userId: doc.user_id,
+        sessionId: doc.session_id,
+        documentType: doc.doc_type,
+        ocrData: ocrData,
+        documentId: doc.id
+      });
+      
+      if (fraudResult.riskLevel === "high") {
+        await this.markDocumentFailed(doc.id, "High fraud risk detected");
+        await this.markSessionRejected(doc.session_id, "Fraud risk");
+        return;
+      }
+      
+
+      // Step 5: Store OCR data
       await query(
         `UPDATE kyc_documents 
          SET scan_status = 'clean',
@@ -110,7 +126,7 @@ class KYCProcessor {
         [JSON.stringify(ocrData), ocrData.expiryDate, doc.id]
       );
 
-      // Step 5: Update session
+      // Step 6: Update session
       await query(
         `UPDATE kyc_sessions 
          SET status = 'pending_otp', 
