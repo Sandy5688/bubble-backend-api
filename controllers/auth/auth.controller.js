@@ -279,7 +279,33 @@ module.exports.verifyEmail = async (req, res) => {
   res.status(501).json({ success: false, message: 'Not implemented yet' });
 };
 module.exports.getMe = async (req, res) => {
-  res.status(501).json({ success: false, message: 'Not implemented yet' });
+  try {
+    const userId = req.userId;
+    const result = await query(
+      'SELECT id, email, first_name, last_name, email_verified, created_at, last_login_at, role FROM users WHERE id = $1',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const user = result.rows[0];
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        emailVerified: user.email_verified,
+        role: user.role,
+        createdAt: user.created_at,
+        lastLoginAt: user.last_login_at
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to get user', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to get user data' });
+  }
 };
 module.exports.googleStart = googleStart;
 module.exports.googleCallback = googleCallback;

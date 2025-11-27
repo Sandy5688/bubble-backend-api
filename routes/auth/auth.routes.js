@@ -12,7 +12,7 @@ const { csrfProtection, getCsrfToken } = require('../../middleware/csrf.middlewa
 // ==========================================
 
 // CSRF Token
-router.get('/csrf-token', csrfProtection, getCsrfToken);
+router.get('/csrf-token', getCsrfToken);
 
 // Registration & Login
 router.post('/signup', signupBruteForce, auditLog(SENSITIVE_ACTIONS.ACCOUNT_CREATED, 'user'), authController.register);
