@@ -1,10 +1,21 @@
-# 🚀 Bubble Backend API Documentation
+# �� Bubble Backend API - Complete Documentation
 
 **Base URL:** `https://bubble-backend-api-production.up.railway.app/api/v1`
 
 ---
 
-## 🔐 Authentication
+## 📋 Table of Contents
+
+1. [Authentication](#authentication)
+2. [KYC Verification](#kyc-verification)
+3. [Payment Integration](#payment-integration)
+4. [Account Management](#account-management)
+5. [Admin Panel](#admin-panel)
+6. [Error Handling](#error-handling)
+
+---
+
+## Authentication
 
 ### Register User
 ```http
@@ -13,7 +24,7 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "SecurePass123!",
+  "password": "SecurePass123",
   "firstName": "John",
   "lastName": "Doe"
 }
@@ -37,8 +48,6 @@ Content-Type: application/json
 }
 ```
 
----
-
 ### Login
 ```http
 POST /auth/signin
@@ -46,37 +55,15 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "SecurePass123!"
+  "password": "SecurePass123"
 }
 ```
-
-**Response:** Same as Register
-
----
 
 ### Get Current User
 ```http
 GET /auth/me
 Authorization: Bearer <accessToken>
 ```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "fullName": "John Doe",
-    "emailVerified": false,
-    "profilePicture": null,
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "lastLoginAt": "2025-01-01T00:00:00.000Z"
-  }
-}
-```
-
----
 
 ### Refresh Token
 ```http
@@ -88,15 +75,11 @@ Content-Type: application/json
 }
 ```
 
----
-
 ### Logout
 ```http
 POST /auth/logout
 Authorization: Bearer <accessToken>
 ```
-
----
 
 ### Google OAuth
 ```http
@@ -110,9 +93,28 @@ GET /auth/apple/start
 POST /auth/apple/callback
 ```
 
+### Magic Link
+```http
+POST /auth/magic/send
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+```http
+POST /auth/magic/verify
+Content-Type: application/json
+
+{
+  "token": "magic-token",
+  "email": "user@example.com"
+}
+```
+
 ---
 
-## 📄 KYC Verification
+## KYC Verification
 
 ### Start KYC Session
 ```http
@@ -132,8 +134,6 @@ Authorization: Bearer <accessToken>
 }
 ```
 
----
-
 ### Submit Consent
 ```http
 POST /kyc/consent
@@ -145,8 +145,6 @@ Content-Type: application/json
   "consentVersion": "1.0"
 }
 ```
-
----
 
 ### Get ID Options
 ```http
@@ -168,9 +166,7 @@ Authorization: Bearer <accessToken>
 }
 ```
 
----
-
-### Get Upload URL (for document upload)
+### Get Upload URL
 ```http
 POST /kyc/upload-url
 Authorization: Bearer <accessToken>
@@ -183,10 +179,6 @@ Content-Type: application/json
   "idType": "passport"
 }
 ```
-
-**Note:** Requires AWS S3 configuration
-
----
 
 ### Send OTP
 ```http
@@ -201,23 +193,6 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "message": "OTP sent via email",
-    "otpId": "uuid",
-    "expiresAt": "2025-01-01T00:10:00.000Z",
-    "method": "email",
-    "destination": "use***@example.com"
-  }
-}
-```
-
----
-
 ### Verify OTP
 ```http
 POST /kyc/verify-otp
@@ -230,46 +205,15 @@ Content-Type: application/json
 }
 ```
 
----
-
-### Check KYC Status
+### Check Status
 ```http
 GET /kyc/status/:kycSessionId
 Authorization: Bearer <accessToken>
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "kycSessionId": "uuid",
-    "status": "pending_upload",
-    "otp_verified": false,
-    "selected_id_type": null,
-    "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-01-01T00:00:00.000Z"
-  }
-}
-```
-
 ---
 
-### Change ID Type
-```http
-POST /kyc/change-id-type
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-
-{
-  "kycSessionId": "uuid",
-  "idType": "driver_license"
-}
-```
-
----
-
-## 💳 Payments
+## Payment Integration
 
 ### Create Stripe Customer
 ```http
@@ -282,23 +226,6 @@ Content-Type: application/json
 }
 ```
 
-**Note:** Requires completed KYC verification
-
----
-
-### Add Payment Method
-```http
-POST /payment/add-payment-method
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-
-{
-  "paymentMethodId": "pm_..."
-}
-```
-
----
-
 ### Create Subscription
 ```http
 POST /payment/create-subscription
@@ -306,11 +233,15 @@ Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {
-  "priceId": "price_..."
+  "priceId": "price_xxxxx"
 }
 ```
 
----
+### Get Subscription
+```http
+GET /payment/subscription/:subscriptionId
+Authorization: Bearer <accessToken>
+```
 
 ### Cancel Subscription
 ```http
@@ -320,47 +251,19 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### Get Subscription
-```http
-GET /payment/subscription/:subscriptionId
-Authorization: Bearer <accessToken>
-```
+## Account Management
 
----
-
-### Activate Grace Tier
-```http
-POST /payment/grace-activate
-Authorization: Bearer <accessToken>
-```
-
----
-
-## �� Account Management
-
-### Request Account Deletion (30-day grace period)
+### Request Deletion (30-day grace)
 ```http
 POST /account/delete/request
 Authorization: Bearer <accessToken>
 ```
-
----
 
 ### Cancel Deletion
 ```http
 POST /account/delete/cancel
 Authorization: Bearer <accessToken>
 ```
-
----
-
-### Immediate Deletion
-```http
-DELETE /account/delete/immediate
-Authorization: Bearer <accessToken>
-```
-
----
 
 ### Check Deletion Status
 ```http
@@ -370,108 +273,55 @@ Authorization: Bearer <accessToken>
 
 ---
 
-## ✨ Magic Link Authentication
+## Admin Panel
 
-### Send Magic Link
+### List Users
 ```http
-POST /magic/send
+GET /admin/users?limit=50&offset=0&search=query
+Authorization: Bearer <adminToken>
+```
+
+### Get User KYC Status
+```http
+GET /admin/kyc/:userId
+Authorization: Bearer <adminToken>
+```
+
+### Update KYC Status
+```http
+PUT /admin/kyc/:sessionId
+Authorization: Bearer <adminToken>
 Content-Type: application/json
 
 {
-  "email": "user@example.com"
+  "status": "approved",
+  "notes": "Verified"
 }
 ```
 
 ---
 
-### Verify Magic Link
-```http
-POST /magic/verify
-Content-Type: application/json
+## Error Handling
 
-{
-  "token": "magic-link-token"
-}
-```
-
----
-
-## 🔒 CSRF Token
-
-### Get CSRF Token
-```http
-GET /auth/csrf-token
-```
-
-**Response:**
-```json
-{
-  "csrfToken": "token...",
-  "message": "CSRF token generated successfully"
-}
-```
-
----
-
-## 🏥 Health Check
-```http
-GET /health
-```
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2025-01-01T00:00:00.000Z",
-  "uptime": 1234.56,
-  "environment": "production",
-  "version": "1.0.0",
-  "database": "healthy"
-}
-```
-
----
-
-## ⚠️ Error Responses
-
-All endpoints return errors in this format:
+All errors return:
 ```json
 {
   "success": false,
-  "error": "Error message here"
+  "error": "Error message"
 }
 ```
 
----
-
-## 🔑 Authentication Notes
-
-1. **Access Token:** Valid for 15 minutes
-2. **Refresh Token:** Valid for 7 days
-3. **Token Rotation:** New refresh token issued on each refresh
-4. Include `Authorization: Bearer <token>` header for protected routes
-
----
-
-## 📱 KYC Flow
-
-1. `POST /kyc/start` → Get session ID
-2. `POST /kyc/consent` → Accept terms
-3. `GET /kyc/options` → Get ID types
-4. `POST /kyc/upload-url` → Get S3 upload URL
-5. Upload document to S3
-6. `POST /kyc/confirm-upload` → Confirm upload
-7. `POST /kyc/send-otp` → Request verification code
-8. `POST /kyc/verify-otp` → Submit code
-9. `GET /kyc/status/:id` → Check status
+**Common Status Codes:**
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `429` - Too Many Requests
+- `500` - Server Error
 
 ---
 
-## 🌐 Base URLs
-
-- **Production:** `https://bubble-backend-api-production.up.railway.app/api/v1`
-- **Health Check:** `https://bubble-backend-api-production.up.railway.app/api/v1/health`
-
----
-
+**Total Endpoints:** 63+  
 **Last Updated:** November 27, 2025
