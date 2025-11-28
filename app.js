@@ -107,21 +107,17 @@ app.use('/api/v1', (req, res, next) => {
   const isWebhook = req.path.includes("/webhook");
   const isHealthRoute = req.path.includes("/health") || req.path.includes("/debug");
   
-  // Only exempt specific public routes from HMAC
+  // Only exempt these exact routes (per audit requirements)
   const publicAuthRoutes = [
-    "/auth/signin",
-    "/auth/signup",
-    "/auth/register",
-    "/auth/refresh",
-    "/auth/csrf-token",
-    "/auth/google",
-    "/auth/apple"
+    "/auth/login",      // Audit specifies login, not signin
+    "/auth/register"
   ];
   
   const isMagicLink = req.path.startsWith("/auth/magic/");
+  const isPaymentWebhook = req.path.includes("/payment/webhook");
   const isPublicAuth = publicAuthRoutes.some(route => req.path.includes(route));
   
-  if (isPublicAuth || isMagicLink || isWebhook || isHealthRoute) {
+  if (isPublicAuth || isMagicLink || isPaymentWebhook || isHealthRoute) {
     return next();
   }
   
